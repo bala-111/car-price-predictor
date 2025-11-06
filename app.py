@@ -8,10 +8,10 @@ import joblib
 # ---------------------------------------------------------
 st.set_page_config(page_title="Used Car Price Predictor", page_icon="🚗")
 st.title("🚗 Used Car Price Prediction App")
-st.caption("Predict resale price using an optimized Random Forest model (120 trees) trained on the CarDekho dataset")
+st.caption("Predict resale price using ML model trained on Cardekho dataset")
 
 # ---------------------------------------------------------
-# 🧠 Load Trained Model (no gzip, smaller size)
+# 🧠 Load Trained Model
 # ---------------------------------------------------------
 @st.cache_resource
 def load_model():
@@ -19,50 +19,123 @@ def load_model():
     return model
 
 model = load_model()
-st.success("✅ ML Model loaded successfully!")
+st.success("✅ Model loaded successfully!")
 
 # ---------------------------------------------------------
-# 📘 Load Brand–Model Specs CSV (dictionary data)
+# 📘 Embedded Brand–Model Dictionary
 # ---------------------------------------------------------
 @st.cache_data
-def load_specs():
-    import os
-
-    local_path = "brand_model_specs.csv"
-    github_url = "https://raw.githubusercontent.com/bala-111/car-price-predictor/main/brand_model_specs.csv"
-
-    # ✅ Try local file first
-    if os.path.exists(local_path):
-        df = pd.read_csv(local_path)
-        st.info("📂 Loaded local CSV file successfully.")
-    else:
-        # ✅ Fallback to GitHub raw link
-        df = pd.read_csv(github_url)
-        st.info("🌐 Loaded CSV from GitHub repository.")
-
-    # --- Clean columns ---
-    df.columns = df.columns.str.strip().str.lower()
-
-    # --- Create dictionary ---
-    car_specs = {}
-    for _, r in df.iterrows():
-        brand = r["brand"].strip().title()
-        model_name = r["model"].strip().title()
-        car_specs.setdefault(brand, {})[model_name] = [
-            int(r["engine"]), int(r["max_power"]), int(r["seats"]), int(r["brand_score"])
-        ]
-
+def get_car_specs():
+    car_specs = {
+        "Maruti": {
+            "Alto": [800, 48, 5, 5],
+            "Swift": [1200, 83, 5, 5],
+            "Baleno": [1200, 90, 5, 5],
+            "Ciaz": [1500, 103, 5, 5],
+            "Wagon R": [1000, 68, 5, 5],
+            "Dzire": [1200, 89, 5, 5],
+        },
+        "Hyundai": {
+            "i10": [1200, 80, 5, 5],
+            "i20": [1200, 88, 5, 5],
+            "Creta": [1500, 113, 5, 5],
+            "Verna": [1500, 115, 5, 5],
+            "Venue": [1200, 118, 5, 5],
+            "Grand": [1200, 83, 5, 5],
+        },
+        "Honda": {
+            "City": [1500, 119, 5, 5],
+            "Amaze": [1200, 87, 5, 5],
+            "Jazz": [1200, 89, 5, 5],
+        },
+        "Tata": {
+            "Tiago": [1200, 84, 5, 4],
+            "Nexon": [1500, 108, 5, 4],
+            "Altroz": [1200, 88, 5, 4],
+            "Harrier": [2000, 170, 5, 4],
+        },
+        "Mahindra": {
+            "Bolero": [1500, 75, 7, 4],
+            "Scorpio": [2200, 140, 7, 4],
+            "Thar": [2200, 130, 4, 4],
+            "XUV500": [2200, 155, 7, 4],
+        },
+        "Toyota": {
+            "Innova": [2400, 150, 7, 5],
+            "Fortuner": [2800, 175, 7, 5],
+            "Glanza": [1200, 89, 5, 5],
+        },
+        "Ford": {
+            "Ecosport": [1500, 121, 5, 3],
+            "Figo": [1200, 95, 5, 3],
+            "Aspire": [1200, 86, 5, 3],
+        },
+        "Volkswagen": {
+            "Vento": [1600, 105, 5, 4],
+            "Polo": [1200, 75, 5, 4],
+        },
+        "BMW": {
+            "X1": [2000, 190, 5, 2],
+            "3 Series": [2000, 255, 5, 2],
+            "5 Series": [3000, 265, 5, 2],
+        },
+        "Mercedes-Benz": {
+            "C-Class": [2000, 200, 5, 2],
+            "E-Class": [2000, 250, 5, 2],
+            "GLA": [2000, 190, 5, 2],
+        },
+        "Audi": {
+            "A3": [1400, 150, 5, 2],
+            "A4": [2000, 190, 5, 2],
+            "Q3": [2000, 180, 5, 2],
+        },
+        "Kia": {
+            "Seltos": [1500, 115, 5, 4],
+            "Sonet": [1200, 83, 5, 4],
+        },
+        "MG": {
+            "Hector": [1500, 141, 5, 3],
+            "ZS EV": [0, 176, 5, 3],
+        },
+        "Jeep": {
+            "Compass": [2000, 170, 5, 3],
+        },
+        "Renault": {
+            "Duster": [1500, 106, 5, 3],
+            "Kwid": [1000, 68, 5, 3],
+        },
+        "Nissan": {
+            "Magnite": [1000, 98, 5, 3],
+        },
+        "Volvo": {
+            "XC40": [2000, 190, 5, 2],
+            "XC60": [2000, 250, 5, 2],
+        },
+        "Jaguar": {
+            "XF": [2000, 250, 5, 2],
+            "XE": [2000, 247, 5, 2],
+        },
+        "Mini": {
+            "Cooper": [1500, 134, 4, 1],
+        },
+        "Land Rover": {
+            "Discovery": [2000, 240, 7, 2],
+        },
+        "Ferrari": {
+            "488": [3900, 660, 2, 1],
+        },
+        "Rolls-Royce": {
+            "Ghost": [6600, 563, 5, 1],
+        },
+    }
     return car_specs
 
-
-car_specs = load_specs()
+car_specs = get_car_specs()
 st.success(f"✅ Loaded {len(car_specs)} brands and {sum(len(v) for v in car_specs.values())} models")
 
 # ---------------------------------------------------------
-# 🏷️ User Inputs
+# 🏷️ Input Section
 # ---------------------------------------------------------
-st.subheader("🧩 Select Car Details")
-
 brand = st.selectbox("Select Car Brand", sorted(car_specs.keys()))
 
 if brand:
@@ -102,7 +175,7 @@ if st.button("Predict Price 💰"):
                               brand_score, diesel_flag, electric_flag, cng_lpg_flag, auto_flag]])
         pred = model.predict(features)[0]
         st.subheader(f"🎯 Estimated Resale Price: ₹ {pred:,.0f}")
-        st.caption("Model: Random Forest (120 Trees, R² ≈ 0.93)")
+        st.caption("Model: Random Forest (Optimized)")
 
 st.markdown("---")
 st.markdown("<p style='text-align:center;'>Made with ❤️ using Streamlit</p>", unsafe_allow_html=True)

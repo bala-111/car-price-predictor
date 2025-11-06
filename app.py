@@ -8,10 +8,10 @@ import joblib
 # ---------------------------------------------------------
 st.set_page_config(page_title="Used Car Price Predictor", page_icon="🚗")
 st.title("🚗 Used Car Price Prediction App")
-st.caption("Predict resale price using a Machine Learning model trained on the CarDekho dataset")
+st.caption("Predict resale price using an optimized Random Forest model (120 trees) trained on the CarDekho dataset")
 
 # ---------------------------------------------------------
-# 🧠 Load Trained Model (non-gzipped .pkl)
+# 🧠 Load Trained Model (no gzip, smaller size)
 # ---------------------------------------------------------
 @st.cache_resource
 def load_model():
@@ -19,18 +19,22 @@ def load_model():
     return model
 
 model = load_model()
-st.success("✅ Model loaded successfully!")
+st.success("✅ ML Model loaded successfully!")
 
 # ---------------------------------------------------------
-# 📂 Load Brand–Model Mapping Dictionary from CSV
+# 📘 Load Brand–Model Specs CSV (dictionary data)
 # ---------------------------------------------------------
 @st.cache_data
 def load_specs():
     df = pd.read_csv("brand_model_specs.csv")
+    df.columns = df.columns.str.strip().str.lower()
+
     car_specs = {}
     for _, r in df.iterrows():
-        car_specs.setdefault(r["brand"], {})[r["model"]] = [
-            r["engine"], r["max_power"], r["seats"], r["brand_score"]
+        brand = r["brand"].strip().title()
+        model_name = r["model"].strip().title()
+        car_specs.setdefault(brand, {})[model_name] = [
+            int(r["engine"]), int(r["max_power"]), int(r["seats"]), int(r["brand_score"])
         ]
     return car_specs
 
@@ -38,8 +42,10 @@ car_specs = load_specs()
 st.success(f"✅ Loaded {len(car_specs)} brands and {sum(len(v) for v in car_specs.values())} models")
 
 # ---------------------------------------------------------
-# 🏷️ Input Section
+# 🏷️ User Inputs
 # ---------------------------------------------------------
+st.subheader("🧩 Select Car Details")
+
 brand = st.selectbox("Select Car Brand", sorted(car_specs.keys()))
 
 if brand:
@@ -63,9 +69,6 @@ with col4:
 with col5:
     trans = st.selectbox("Transmission", ["Manual", "Automatic"])
 
-# ---------------------------------------------------------
-# ⚙️ Feature Engineering Flags
-# ---------------------------------------------------------
 diesel_flag   = int(fuel.lower() == "diesel")
 electric_flag = int(fuel.lower() == "electric")
 cng_lpg_flag  = int(fuel.lower() in ["cng", "lpg"])
@@ -78,16 +81,11 @@ if st.button("Predict Price 💰"):
     if not brand or not car_model:
         st.error("⚠️ Please select both Brand and Model.")
     else:
-        # Prepare features for prediction
         features = np.array([[age, km, mileage, engine, power, seats,
-                              brand_score, diesel_flag, electric_flag,
-                              cng_lpg_flag, auto_flag]])
+                              brand_score, diesel_flag, electric_flag, cng_lpg_flag, auto_flag]])
         pred = model.predict(features)[0]
         st.subheader(f"🎯 Estimated Resale Price: ₹ {pred:,.0f}")
-        st.caption("Model: Optimized Random Forest (150 Trees, Compact Version)")
+        st.caption("Model: Random Forest (120 Trees, R² ≈ 0.93)")
 
-# ---------------------------------------------------------
-# 📊 Footer
-# ---------------------------------------------------------
 st.markdown("---")
 st.markdown("<p style='text-align:center;'>Made with ❤️ using Streamlit</p>", unsafe_allow_html=True)

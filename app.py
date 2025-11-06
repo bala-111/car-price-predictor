@@ -26,9 +26,24 @@ st.success("✅ ML Model loaded successfully!")
 # ---------------------------------------------------------
 @st.cache_data
 def load_specs():
-    df = pd.read_csv("brand_model_specs.csv")
+    import os
+
+    local_path = "brand_model_specs.csv"
+    github_url = "https://raw.githubusercontent.com/bala-111/car-price-predictor/main/brand_model_specs.csv"
+
+    # ✅ Try local file first
+    if os.path.exists(local_path):
+        df = pd.read_csv(local_path)
+        st.info("📂 Loaded local CSV file successfully.")
+    else:
+        # ✅ Fallback to GitHub raw link
+        df = pd.read_csv(github_url)
+        st.info("🌐 Loaded CSV from GitHub repository.")
+
+    # --- Clean columns ---
     df.columns = df.columns.str.strip().str.lower()
 
+    # --- Create dictionary ---
     car_specs = {}
     for _, r in df.iterrows():
         brand = r["brand"].strip().title()
@@ -36,7 +51,9 @@ def load_specs():
         car_specs.setdefault(brand, {})[model_name] = [
             int(r["engine"]), int(r["max_power"]), int(r["seats"]), int(r["brand_score"])
         ]
+
     return car_specs
+
 
 car_specs = load_specs()
 st.success(f"✅ Loaded {len(car_specs)} brands and {sum(len(v) for v in car_specs.values())} models")

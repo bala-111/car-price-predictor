@@ -1,29 +1,43 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import importlib.util
+import subprocess
+import sys
+import os
+
+# -------------------------------------------------------------------
+# 🧩 Ensure joblib is available (auto-install if missing)
+# -------------------------------------------------------------------
+if importlib.util.find_spec("joblib") is None:
+    subprocess.run([sys.executable, "-m", "pip", "install", "joblib", "-q"])
 import joblib
 
-# ---------------------------------------------------------
-# ⚙️ App Configuration
-# ---------------------------------------------------------
-st.set_page_config(page_title="Used Car Price Predictor", page_icon="🚗")
+# -------------------------------------------------------------------
+# ⚙️ Streamlit Page Configuration
+# -------------------------------------------------------------------
+st.set_page_config(page_title="Used Car Price Predictor", page_icon="🚗", layout="centered")
 st.title("🚗 Used Car Price Prediction App")
-st.caption("Predict resale price using ML model trained on Cardekho dataset")
+st.caption("Predict resale price using ML model trained on CarDekho dataset")
 
-# ---------------------------------------------------------
+# -------------------------------------------------------------------
 # 🧠 Load Trained Model
-# ---------------------------------------------------------
+# -------------------------------------------------------------------
 @st.cache_resource
 def load_model():
-    model = joblib.load("used_car_price_model.pkl")
+    model_path = "used_car_price_model.pkl"
+    if not os.path.exists(model_path):
+        st.error("❌ Model file not found! Please upload 'used_car_price_model.pkl'.")
+        st.stop()
+    model = joblib.load(model_path)
     return model
 
 model = load_model()
 st.success("✅ Model loaded successfully!")
 
-# ---------------------------------------------------------
-# 📘 Embedded Brand–Model Dictionary
-# ---------------------------------------------------------
+# -------------------------------------------------------------------
+# 📘 Brand–Model–Specs Dictionary (Full List)
+# -------------------------------------------------------------------
 @st.cache_data
 def get_car_specs():
     car_specs = {
@@ -59,6 +73,7 @@ def get_car_specs():
             "Scorpio": [2200, 140, 7, 4],
             "Thar": [2200, 130, 4, 4],
             "XUV500": [2200, 155, 7, 4],
+            "XUV700": [1999, 197, 7, 4],
         },
         "Toyota": {
             "Innova": [2400, 150, 7, 5],
@@ -133,9 +148,9 @@ def get_car_specs():
 car_specs = get_car_specs()
 st.success(f"✅ Loaded {len(car_specs)} brands and {sum(len(v) for v in car_specs.values())} models")
 
-# ---------------------------------------------------------
+# -------------------------------------------------------------------
 # 🏷️ Input Section
-# ---------------------------------------------------------
+# -------------------------------------------------------------------
 brand = st.selectbox("Select Car Brand", sorted(car_specs.keys()))
 
 if brand:
@@ -164,18 +179,19 @@ electric_flag = int(fuel.lower() == "electric")
 cng_lpg_flag  = int(fuel.lower() in ["cng", "lpg"])
 auto_flag     = int(trans.lower() == "automatic")
 
-# ---------------------------------------------------------
+# -------------------------------------------------------------------
 # 🔮 Prediction
-# ---------------------------------------------------------
+# -------------------------------------------------------------------
 if st.button("Predict Price 💰"):
     if not brand or not car_model:
         st.error("⚠️ Please select both Brand and Model.")
     else:
         features = np.array([[age, km, mileage, engine, power, seats,
-                              brand_score, diesel_flag, electric_flag, cng_lpg_flag, auto_flag]])
+                              brand_score, diesel_flag, electric_flag,
+                              cng_lpg_flag, auto_flag]])
         pred = model.predict(features)[0]
         st.subheader(f"🎯 Estimated Resale Price: ₹ {pred:,.0f}")
         st.caption("Model: Random Forest (Optimized)")
 
 st.markdown("---")
-st.markdown("<p style='text-align:center;'>Made with ❤️ using Streamlit</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center;'>Made with ❤️ using Streamlit on Hugging Face</p>", unsafe_allow_html=True)
